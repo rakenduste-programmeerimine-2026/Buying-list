@@ -17,6 +17,19 @@ alter table public.stores
 
 create index if not exists stores_user_id_idx on public.stores (user_id);
 
+-- Eemalda KÕIK varasemad reeglid nendelt tabelitelt (nt „allow all“), sest Postgres
+-- ühendab lubavad reeglid OR-iga ja üks vana reegel tühistaks kogu eralduse.
+do $$
+declare pol record;
+begin
+  for pol in
+    select policyname, tablename from pg_policies
+    where schemaname = 'public' and tablename in ('stores', 'products')
+  loop
+    execute format('drop policy %I on public.%I', pol.policyname, pol.tablename);
+  end loop;
+end $$;
+
 alter table public.stores enable row level security;
 alter table public.products enable row level security;
 

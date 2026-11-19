@@ -35,3 +35,7 @@ create table public.products (
 -- Supabase annab vaikimisi need õigused API rollidele.
 grant usage on schema public to anon, authenticated;
 grant all on public.stores, public.products to anon, authenticated;
+
+-- Varasem lubav reegel (nagu „allow all“), mille 02_rls_auth.sql peab eemaldama.
+alter table public.stores enable row level security;
+create policy "old_allow_all" on public.stores for all to anon, authenticated using (true) with check (true);
