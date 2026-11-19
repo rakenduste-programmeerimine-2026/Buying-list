@@ -1,0 +1,17 @@
+import { fileURLToPath } from "node:url";
+import { defineConfig } from "vitest/config";
+
+export default defineConfig({
+  resolve: {
+    alias: {
+      "@": fileURLToPath(new URL("./", import.meta.url)),
+      // "server-only" viskab vea väljaspool Next.js serverit; testides asendame tühja mooduliga.
+      "server-only": fileURLToPath(new URL("./tests/helpers/empty.ts", import.meta.url)),
+    },
+  },
+  test: {
+    environment: "node",
+    include: ["tests/**/*.test.ts"],
+    restoreMocks: true,
+  },
+});
