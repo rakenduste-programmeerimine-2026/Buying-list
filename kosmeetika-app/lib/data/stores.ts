@@ -49,24 +49,6 @@ export async function getStoresWithCounts(db: DbClient): Promise<ActionResult<St
   }
 }
 
-/** Ühe poe andmed koos toodete arvuga (nt pärast nime muutmist). */
-export async function getStoreWithCountsById(db: DbClient, id: unknown): Promise<ActionResult<StoreWithCounts>> {
-  const idCheck = validateId(id, "store");
-  if (!idCheck.ok) return idCheck;
-  try {
-    const { data, error } = await db
-      .from("stores")
-      .select(`${STORE_COLUMNS}, products(is_needed)`)
-      .eq("id", idCheck.value)
-      .maybeSingle();
-    if (error) return mapDbError(error, "store", "getStoreWithCountsById");
-    if (!data) return notFound("store");
-    return success(withCounts(data as StoreRowWithProducts));
-  } catch (err) {
-    return mapUnexpected(err, "getStoreWithCountsById");
-  }
-}
-
 /** Ühe poe andmed. Kui poodi pole, tagastab NOT_FOUND. */
 export async function getStoreById(db: DbClient, id: unknown): Promise<ActionResult<Store>> {
   const idCheck = validateId(id, "store");
@@ -103,8 +85,8 @@ export async function createStore(db: DbClient, name: unknown): Promise<ActionRe
   }
 }
 
-/** Poe nime muutmine. */
-export async function updateStore(db: DbClient, id: unknown, name: unknown): Promise<ActionResult<Store>> {
+/** Poe nime muutmine. Tagastab poe koos toodete arvuga (üks päring). */
+export async function updateStore(db: DbClient, id: unknown, name: unknown): Promise<ActionResult<StoreWithCounts>> {
   const idCheck = validateId(id, "store");
   if (!idCheck.ok) return idCheck;
   const nameCheck = validateName(name, "store");
@@ -115,11 +97,11 @@ export async function updateStore(db: DbClient, id: unknown, name: unknown): Pro
       .from("stores")
       .update({ name: nameCheck.value })
       .eq("id", idCheck.value)
-      .select(STORE_COLUMNS)
+      .select(`${STORE_COLUMNS}, products(is_needed)`)
       .maybeSingle();
     if (error) return mapDbError(error, "store", "updateStore");
     if (!data) return notFound("store");
-    return success(data);
+    return success(withCounts(data as StoreRowWithProducts));
   } catch (err) {
     return mapUnexpected(err, "updateStore");
   }

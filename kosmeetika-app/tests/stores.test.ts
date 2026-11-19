@@ -5,7 +5,6 @@ import {
   getStoreById,
   getStores,
   getStoresWithCounts,
-  getStoreWithCountsById,
   getStoreWithProducts,
   updateStore,
 } from "@/lib/data/stores";
@@ -99,27 +98,6 @@ describe("getStoreById", () => {
   });
 });
 
-describe("getStoreWithCountsById", () => {
-  it("tagastab poe koos arvudega", async () => {
-    const fake = createFakeSupabase();
-    fake.respond({ data: { ...store(), products: [{ is_needed: true }] } });
-    expect(await getStoreWithCountsById(fake.db, STORE_ID)).toEqual({
-      ok: true,
-      data: { ...store(), product_count: 1, needed_count: 1 },
-    });
-  });
-
-  it("NOT_FOUND / VALIDATION / viga", async () => {
-    const fake = createFakeSupabase();
-    fake.respond({ data: null }, { error: { code: "XX000" } });
-    expect(await getStoreWithCountsById(fake.db, STORE_ID)).toMatchObject({ code: "NOT_FOUND" });
-    expect(await getStoreWithCountsById(fake.db, STORE_ID)).toMatchObject({ code: "UNKNOWN" });
-    expect(await getStoreWithCountsById(fake.db, "x")).toMatchObject({ code: "VALIDATION" });
-    fake.throwOnNext();
-    expect(await getStoreWithCountsById(fake.db, STORE_ID)).toMatchObject({ code: "UNKNOWN" });
-  });
-});
-
 describe("getStoreWithProducts", () => {
   it("tagastab poe koos toodetega", async () => {
     const fake = createFakeSupabase();
@@ -181,11 +159,11 @@ describe("createStore", () => {
 describe("updateStore", () => {
   it("muudab nime", async () => {
     const fake = createFakeSupabase();
-    fake.respond({ data: store({ name: "Uus nimi" }) });
+    fake.respond({ data: { ...store({ name: "Uus nimi" }), products: [{ is_needed: false }] } });
 
     const r = await updateStore(fake.db, STORE_ID, " Uus nimi ");
 
-    expect(r).toEqual({ ok: true, data: store({ name: "Uus nimi" }) });
+    expect(r).toEqual({ ok: true, data: { ...store({ name: "Uus nimi" }), product_count: 1, needed_count: 0 } });
     expect(fake.argsOf("update")).toEqual([[{ name: "Uus nimi" }]]);
     expect(fake.argsOf("eq")).toEqual([["id", STORE_ID]]);
     expect(fake.methodsOf()).toContain("select");

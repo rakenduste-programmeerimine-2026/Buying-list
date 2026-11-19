@@ -43,7 +43,7 @@ export async function createStore(name: string): Promise<ActionResult<Store>> {
 }
 
 /** Poe nime muutmine. */
-export async function updateStore(id: string, name: string): Promise<ActionResult<Store>> {
+export async function updateStore(id: string, name: string): Promise<ActionResult<StoreWithCounts>> {
   const result = await withDb("updateStore", (db) => stores.updateStore(db, id, name));
   if (result.ok) revalidateStores(result.data.id);
   return result;

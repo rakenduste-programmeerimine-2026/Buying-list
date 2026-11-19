@@ -22,12 +22,8 @@ export async function PATCH(request: Request, { params }: Ctx) {
   const body = await readMutationBody(request);
   if (!body.ok) return errorResponse(body);
 
-  // Pärast nime muutmist loeme poe uuesti koos toodete arvuga (StoreSummary).
-  const result = await withDb("PATCH /api/stores/:id", async (db) => {
-    const updated = await stores.updateStore(db, id, body.body.name);
-    if (!updated.ok) return updated;
-    return stores.getStoreWithCountsById(db, updated.data.id);
-  });
+  // updateStore tagastab ühe päringuga ka toodete arvu (StoreSummary).
+  const result = await withDb("PATCH /api/stores/:id", (db) => stores.updateStore(db, id, body.body.name));
   if (!result.ok) return errorResponse(result);
   revalidateStores(result.data.id);
   return json(toStoreSummaryDto(result.data));
