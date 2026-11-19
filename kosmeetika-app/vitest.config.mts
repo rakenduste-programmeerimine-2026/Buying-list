@@ -13,5 +13,12 @@ export default defineConfig({
     environment: "node",
     include: ["tests/**/*.test.ts"],
     restoreMocks: true,
+    coverage: {
+      provider: "v8",
+      // Ainult backendi kood (frontendi failid lib/api*.ts jms jäävad välja).
+      include: ["lib/data/**", "lib/actions/**", "lib/http/**", "lib/supabase/**", "app/api/**", "app/auth/**"],
+      reporter: ["text-summary", "text"],
+      thresholds: { lines: 90, functions: 90, branches: 85, statements: 90 },
+    },
   },
 });
