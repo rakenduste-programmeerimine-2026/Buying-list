@@ -28,9 +28,10 @@ export function checkSameOrigin(request: Request): Failure | null {
   // See võib sisaldada mitut väärtust („a.ee, b.ee“) ja vaikimisi porti („a.ee:443“).
   const forwardedHost = request.headers.get("x-forwarded-host")?.split(",")[0]?.trim();
   const host = forwardedHost || request.headers.get("host");
-  const proto =
-    request.headers.get("x-forwarded-proto")?.split(",")[0]?.trim() || originUrl.protocol.replace(":", "");
-  if (!host || normalizeHost(originUrl.host, originUrl.protocol) !== normalizeHost(host, `${proto}:`)) {
+  const forwardedProto = request.headers.get("x-forwarded-proto")?.split(",")[0]?.trim().toLowerCase();
+  // Skeem kuulub päritolu juurde: http://sait ≠ https://sait.
+  if (forwardedProto && originUrl.protocol !== `${forwardedProto}:`) return crossSite();
+  if (!host || normalizeHost(originUrl.host, originUrl.protocol) !== normalizeHost(host, originUrl.protocol)) {
     return crossSite();
   }
   return null;

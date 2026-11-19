@@ -1,5 +1,5 @@
 import { mapDbError, mapUnexpected, notFound } from "./errors";
-import { success, type ActionResult } from "./result";
+import { failure, success, type ActionResult } from "./result";
 import type { DbClient, Product } from "./types";
 import { sortProducts } from "./sort";
 import { validateBoolean, validateId, validateName } from "./validation";
@@ -65,7 +65,14 @@ export async function createProduct(db: DbClient, storeId: unknown, name: unknow
       .select(PRODUCT_COLUMNS)
       .single();
     if (error) {
-      if (error.code === "42501" || error.code === "23503") return notFound("store");
+      if (error.code === "23503") return notFound("store");
+      if (error.code === "42501") {
+        // RLS `with check` keeldus: kas pood puudub/on teise kasutaja oma (→ 404)
+        // või on tegu päris õiguste probleemiga (→ 403, logitakse)?
+        const exists = await storeExists(db, idCheck.value);
+        if (exists === false) return notFound("store");
+        if (exists !== true) return exists;
+      }
       return mapDbError(error, "product", "createProduct");
     }
     return success(data);
@@ -119,7 +126,7 @@ export async function updateProductFields(
     patch.is_needed = flag.value;
   }
   if (Object.keys(patch).length === 0) {
-    return { ok: false, code: "VALIDATION", error: "Muudatusi pole: saada „name“ ja/või „needed“." };
+    return failure("VALIDATION", "Muudatusi pole: saada „name“ ja/või „needed“.");
   }
   return updateProductRow(db, idCheck.value, patch, "updateProductFields");
 }

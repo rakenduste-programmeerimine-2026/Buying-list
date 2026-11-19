@@ -128,6 +128,17 @@ describe("POST /api/stores", () => {
     expect(res.status).toBe(201);
   });
 
+  it("http:// päritolu https saidil on keelatud (skeem on osa päritolust)", async () => {
+    const res = await storesRoute.POST(
+      req("/api/stores", {
+        method: "POST",
+        body: { name: "x" },
+        headers: { "x-forwarded-host": "kosmeetik.ee", "x-forwarded-proto": "https", origin: "http://kosmeetik.ee" },
+      }),
+    );
+    expect(res.status).toBe(403);
+  });
+
   it("proksi taga teine sait on endiselt keelatud", async () => {
     const res = await storesRoute.POST(
       req("/api/stores", {
@@ -182,13 +193,11 @@ describe("/api/stores/:id", () => {
   });
 
   it("PATCH muudab nime ja tagastab õiged toodete arvud", async () => {
-    state.fake!.respond(
-      { data: store({ name: "Uus" }) },
-      { data: { ...store({ name: "Uus" }), products: [{ is_needed: true }, { is_needed: false }] } },
-    );
+    state.fake!.respond({ data: { ...store({ name: "Uus" }), products: [{ is_needed: true }, { is_needed: false }] } });
     const res = await storeRoute.PATCH(req(`/api/stores/${STORE_ID}`, { method: "PATCH", body: { name: "Uus" } }), ctx(STORE_ID));
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ id: STORE_ID, name: "Uus", productCount: 2, neededCount: 1 });
+    expect(state.fake!.calls).toHaveLength(1);
   });
 
   it("PATCH puuduva poe korral 404", async () => {
@@ -247,13 +256,23 @@ describe("/api/stores/:id/products", () => {
   });
 
   it("POST teise kasutaja poodi (RLS with check → 42501) → 404", async () => {
-    state.fake!.respond({ error: { code: "42501" } });
+    state.fake!.respond({ error: { code: "42501" } }, { data: null });
     const res = await storeProductsRoute.POST(
       req(`/api/stores/${STORE_ID}/products`, { method: "POST", body: { name: "X" } }),
       ctx(STORE_ID),
     );
     expect(res.status).toBe(404);
     expect((await res.json()).error).toBe("Poodi ei leitud.");
+  });
+
+  it("POST nähtavasse poodi, aga õigus puudub (nt GRANT) → 403", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    state.fake!.respond({ error: { code: "42501" } }, { data: { id: STORE_ID } });
+    const res = await storeProductsRoute.POST(
+      req(`/api/stores/${STORE_ID}/products`, { method: "POST", body: { name: "X" } }),
+      ctx(STORE_ID),
+    );
+    expect(res.status).toBe(403);
   });
 
   it("GET tagastab tooted", async () => {
