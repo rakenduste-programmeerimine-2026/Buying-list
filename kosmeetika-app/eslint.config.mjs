@@ -5,14 +5,9 @@ import globals from "globals";
 import tseslint from "typescript-eslint";
 
 export const BACKEND_FILES = [
-  "lib/data/**/*.ts",
-  "lib/actions/**/*.ts",
-  "lib/http/**/*.ts",
-  "lib/supabase/**/*.ts",
+  "backend/**/*.ts",
   "app/api/**/*.ts",
   "app/auth/**/*.ts",
-  "types/**/*.ts",
-  "tests/**/*.ts",
   "middleware.ts",
 ];
 
@@ -34,7 +29,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ["tests/**/*.ts"],
+    files: ["backend/tests/**/*.ts"],
     rules: {
       "@typescript-eslint/no-non-null-assertion": "off",
       "@typescript-eslint/no-unsafe-assignment": "off",

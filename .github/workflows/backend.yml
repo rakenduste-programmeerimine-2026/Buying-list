@@ -52,7 +52,7 @@ jobs:
       PGPASSWORD: postgres
     steps:
       - uses: actions/checkout@v4
-      - run: bash supabase/tests/run.sh
+      - run: bash backend/supabase/tests/run.sh
 
   build:
     name: Next.js build
