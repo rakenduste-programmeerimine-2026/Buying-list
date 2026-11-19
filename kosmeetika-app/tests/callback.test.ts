@@ -23,9 +23,18 @@ describe("GET /auth/callback", () => {
     expect(res.headers.get("location")).toBe("http://localhost:3000/");
   });
 
-  it("vigane kood → avaleht veaga", async () => {
+  it("vigane kood → avaleht veaga ja logi", async () => {
+    const spy = vi.spyOn(console, "error").mockImplementation(() => undefined);
     exchange.mockResolvedValueOnce({ error: { code: "bad_code" } });
     const res = await get("?code=bad");
+    expect(res.headers.get("location")).toBe("http://localhost:3000/?auth_error=1");
+    expect(spy).toHaveBeenCalledWith("[backend] auth callback:", "bad_code");
+  });
+
+  it("erand → avaleht veaga", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    exchange.mockRejectedValueOnce(new Error("network"));
+    const res = await get("?code=abc");
     expect(res.headers.get("location")).toBe("http://localhost:3000/?auth_error=1");
   });
 
