@@ -1,31 +1,39 @@
+import { z } from "zod";
 import { failure, success, type ActionResult, type Failure } from "./result";
 import type { DbClient } from "./types";
-import type { Valid } from "./validation";
+import { parseWith, type Valid } from "./validation";
 
 export const MIN_PASSWORD_LENGTH = 8;
-export const MAX_PASSWORD_LENGTH = 72; // bcrypt'i piir
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+export const MAX_PASSWORD_LENGTH = 72; // bcrypt'i piir baitides
 
 export type CurrentUser = { id: string; email: string | null; isAnonymous: boolean };
+
+export const emailSchema = z
+  .string({ error: "Sisesta e-posti aadress." })
+  .transform((v) => v.trim().toLowerCase())
+  .pipe(
+    z
+      .string()
+      .min(1, { error: "Sisesta e-posti aadress." })
+      .max(254, { error: "E-posti aadress ei ole korrektne." })
+      .pipe(z.email({ error: "E-posti aadress ei ole korrektne." })),
+  );
+
+export const passwordSchema = z
+  .string({ error: `Parool peab olema vähemalt ${MIN_PASSWORD_LENGTH} tähemärki pikk.` })
+  .min(MIN_PASSWORD_LENGTH, { error: `Parool peab olema vähemalt ${MIN_PASSWORD_LENGTH} tähemärki pikk.` })
+  .refine((v) => new TextEncoder().encode(v).length <= MAX_PASSWORD_LENGTH, {
+    error: `Parool võib olla kuni ${MAX_PASSWORD_LENGTH} baiti pikk.`,
+  });
 
 type AuthErrorLike = { code?: string | null; status?: number | null; message?: string | null; name?: string };
 
 export function validateEmail(value: unknown): Valid<string> | Failure {
-  if (typeof value !== "string") return failure("VALIDATION", "Sisesta e-posti aadress.");
-  const email = value.trim().toLowerCase();
-  if (!email) return failure("VALIDATION", "Sisesta e-posti aadress.");
-  if (email.length > 254 || !EMAIL_RE.test(email)) return failure("VALIDATION", "E-posti aadress ei ole korrektne.");
-  return { ok: true, value: email };
+  return parseWith(emailSchema, value);
 }
 
 export function validatePassword(value: unknown): Valid<string> | Failure {
-  if (typeof value !== "string" || value.length < MIN_PASSWORD_LENGTH) {
-    return failure("VALIDATION", `Parool peab olema vähemalt ${MIN_PASSWORD_LENGTH} tähemärki pikk.`);
-  }
-  if (new TextEncoder().encode(value).length > MAX_PASSWORD_LENGTH) {
-    return failure("VALIDATION", `Parool võib olla kuni ${MAX_PASSWORD_LENGTH} baiti pikk.`);
-  }
-  return { ok: true, value };
+  return parseWith(passwordSchema, value);
 }
 
 /** Supabase Auth'i vea teisendamine. Ei avalda, kas e-post on süsteemis (v.a registreerimisel). */
@@ -159,6 +167,7 @@ export async function setPassword(db: DbClient, password: unknown): Promise<Acti
 export function safeRedirectPath(next: unknown, fallback = "/"): string {
   if (typeof next !== "string") return fallback;
   if (!next.startsWith("/") || next.startsWith("//") || next.startsWith("/\\")) return fallback;
+  // eslint-disable-next-line no-control-regex
   if (/[\u0000-\u001F]/.test(next)) return fallback;
   return next;
 }

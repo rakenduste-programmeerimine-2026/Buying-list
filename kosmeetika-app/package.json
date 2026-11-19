@@ -10,7 +10,10 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
-    "test:db": "bash supabase/tests/run.sh"
+    "test:db": "bash supabase/tests/run.sh",
+    "lint:backend": "eslint lib/data lib/actions lib/http lib/supabase app/api app/auth types tests middleware.ts",
+    "test:coverage": "vitest run --coverage",
+    "check": "npm run typecheck && npm run lint:backend && npm run test:coverage"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
@@ -18,13 +21,22 @@
     "next": "^15.0.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "server-only": "^0.0.1"
+    "server-only": "^0.0.1",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@types/node": "^22.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
+    "@vitest/coverage-v8": "^5.1.1",
+    "eslint": "^10.15.0",
+    "globals": "^17.14.0",
     "typescript": "^5.6.0",
+    "typescript-eslint": "^8.73.0",
     "vitest": "^5.1.1"
+  },
+  "engines": {
+    "node": ">=20.9"
   }
 }
