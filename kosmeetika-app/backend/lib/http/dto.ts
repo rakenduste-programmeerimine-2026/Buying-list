@@ -1,6 +1,6 @@
 /**
  * Andmekujud, mida HTTP API (app/api/**) tagastab.
- * Need vastavad frontendi lepingule (kosmeetika-app/lib/types.ts, haru Frontend-Markus).
+ * Need vastavad frontendi lepingule (kosmeetika-app/frontend/lib/types.ts).
  */
 import type { Product, Store, StoreWithCounts, StoreWithProducts } from "@/lib/data/types";
 
