@@ -1,7 +1,7 @@
 import "server-only";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { mapUnexpected } from "@/lib/data/errors";
+import { authUnavailable, isTransientAuthError, mapUnexpected } from "@/lib/data/errors";
 import { failure } from "@/lib/data/result";
 import type { ActionResult } from "@/lib/data/result";
 import type { DbClient } from "@/lib/data/types";
@@ -30,7 +30,8 @@ export async function withDb<T>(
     // getClaims() kontrollib JWT allkirja (getSession() EI kontrolli, seda ei tohi
     // serveris usaldada). Asümmeetriliste võtmete korral ilma võrgupäringuta.
     const { data, error } = await db.auth.getClaims();
-    if (error || !data?.claims?.sub) return failure("UNAUTHORIZED", NOT_SIGNED_IN);
+    if (error && isTransientAuthError(error)) return authUnavailable(context, error);
+    if (error || !data?.claims.sub) return failure("UNAUTHORIZED", NOT_SIGNED_IN);
   } catch (err) {
     return mapUnexpected(err, context);
   }

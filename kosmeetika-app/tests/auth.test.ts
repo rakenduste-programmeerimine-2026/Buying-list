@@ -54,6 +54,12 @@ describe("getCurrentUser", () => {
       data: { id: "44444444-4444-4444-8444-444444444444", email: null, isAnonymous: true },
     });
   });
+  it("Auth server maas → viga, mitte „välja logitud“", async () => {
+    const fake = createFakeSupabase();
+    authOf(fake).getUser = async () => ({ data: { user: null }, error: { name: "AuthRetryableFetchError", status: 503 } });
+    expect(await getCurrentUser(fake.db)).toMatchObject({ ok: false, code: "UNKNOWN" });
+  });
+
   it("tagastab null, kui keegi pole sisse logitud", async () => {
     const fake = createFakeSupabase();
     fake.signOut();

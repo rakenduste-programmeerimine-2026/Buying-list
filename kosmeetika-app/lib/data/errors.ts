@@ -47,6 +47,24 @@ export function mapDbError(error: DbError, entity: Entity, context: string): Fai
   }
 }
 
+/**
+ * Kas Supabase Auth'i viga on ajutine (võrk, Auth server maas), mitte
+ * „kasutaja pole sisse logitud“? Siis ei tohi kasutajale öelda, et ta
+ * on välja logitud.
+ */
+export function isTransientAuthError(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const e = error as { name?: string; status?: number };
+  if (e.name === "AuthRetryableFetchError") return true;
+  return typeof e.status === "number" && (e.status === 0 || e.status >= 500);
+}
+
+/** Auth teenusega ei saanud ühendust. */
+export function authUnavailable(context: string, error: unknown): Failure {
+  logServerError(context, error);
+  return failure("UNKNOWN", "Sisselogimise teenusega ei saanud ühendust. Proovi hiljem uuesti.");
+}
+
 /** Ootamatu erand (nt võrguühendus katkes). */
 export function mapUnexpected(err: unknown, context: string): Failure {
   if (err instanceof Error && err.message.startsWith("Supabase'i seadistus puudub")) {

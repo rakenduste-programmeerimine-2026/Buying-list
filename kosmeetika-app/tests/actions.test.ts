@@ -42,6 +42,33 @@ describe("store actions", () => {
     });
   });
 
+  it("Auth teenuse katkestus → UNKNOWN, mitte „pole sisse logitud“", async () => {
+    (state.fake!.auth as unknown as Record<string, unknown>).getClaims = async () => ({
+      data: null,
+      error: { name: "AuthRetryableFetchError", status: 0, message: "fetch failed" },
+    });
+    expect(await storeActions.getStores()).toEqual({
+      ok: false,
+      code: "UNKNOWN",
+      error: "Sisselogimise teenusega ei saanud ühendust. Proovi hiljem uuesti.",
+    });
+  });
+
+  it("aegunud/vigane token → UNAUTHORIZED", async () => {
+    (state.fake!.auth as unknown as Record<string, unknown>).getClaims = async () => ({
+      data: null,
+      error: { name: "AuthInvalidJwtError", status: 400, message: "invalid JWT" },
+    });
+    expect(await storeActions.getStores()).toMatchObject({ code: "UNAUTHORIZED" });
+  });
+
+  it("getClaims viskab erandi → UNKNOWN", async () => {
+    (state.fake!.auth as unknown as Record<string, unknown>).getClaims = async () => {
+      throw new Error("boom");
+    };
+    expect(await storeActions.getStores()).toMatchObject({ code: "UNKNOWN" });
+  });
+
   it("väljalogitud kasutaja → UNAUTHORIZED, mitte tühi loetelu", async () => {
     state.fake!.signOut();
     expect(await storeActions.getStores()).toMatchObject({ ok: false, code: "UNAUTHORIZED" });

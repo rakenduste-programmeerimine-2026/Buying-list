@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { authUnavailable, isTransientAuthError } from "./errors";
 import { failure, success, type ActionResult, type Failure } from "./result";
 import type { DbClient } from "./types";
 import { parseWith, type Valid } from "./validation";
@@ -77,6 +78,7 @@ async function guard<T>(context: string, fn: () => Promise<ActionResult<T>>): Pr
 export async function getCurrentUser(db: DbClient): Promise<ActionResult<CurrentUser | null>> {
   return guard("getCurrentUser", async () => {
     const { data, error } = await db.auth.getUser();
+    if (error && isTransientAuthError(error)) return authUnavailable("getCurrentUser", error);
     if (error || !data.user) return success(null);
     const u = data.user;
     return success({ id: u.id, email: u.email ?? null, isAnonymous: u.is_anonymous ?? false });
