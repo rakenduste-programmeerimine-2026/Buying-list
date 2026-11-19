@@ -21,6 +21,10 @@ export function createFakeSupabase() {
       auth.user
         ? { data: { user: auth.user }, error: null }
         : { data: { user: null }, error: { name: "AuthSessionMissingError", message: "Auth session missing!" } },
+    getClaims: async () =>
+      auth.user
+        ? { data: { claims: { sub: auth.user.id, role: "authenticated", is_anonymous: auth.user.is_anonymous } }, error: null }
+        : { data: null, error: null },
   };
 
   const client = {

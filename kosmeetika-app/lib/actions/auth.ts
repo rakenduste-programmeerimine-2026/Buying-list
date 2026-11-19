@@ -19,7 +19,7 @@ import type { DbClient } from "@/lib/data/types";
 
 async function db(context: string): Promise<{ ok: true; db: DbClient } | Failure> {
   try {
-    return { ok: true, db: (await createClient()) as unknown as DbClient };
+    return { ok: true, db: await createClient() };
   } catch (err) {
     return mapUnexpected(err, context);
   }

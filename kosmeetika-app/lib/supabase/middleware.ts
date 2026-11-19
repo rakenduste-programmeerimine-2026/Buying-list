@@ -32,7 +32,7 @@ export function shouldCreateAnonymousSession(request: NextRequest): boolean {
 export async function updateSession(request: NextRequest): Promise<NextResponse> {
   let response = NextResponse.next({ request });
 
-  let env: { url: string; anonKey: string };
+  let env: { url: string; publicKey: string };
   try {
     env = getSupabaseEnv();
   } catch {
@@ -40,7 +40,7 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
     return response;
   }
 
-  const supabase = createServerClient<Database>(env.url, env.anonKey, {
+  const supabase = createServerClient<Database>(env.url, env.publicKey, {
     cookies: {
       getAll() {
         return request.cookies.getAll();
@@ -55,13 +55,14 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
     },
   });
 
-  // NB: getUser() ja createServerClient vahele ei tohi muud koodi panna.
+  // NB: createServerClient ja getClaims() vahele ei tohi muud koodi panna.
+  // getClaims() kontrollib JWT allkirja (asümmeetriliste võtmete korral lokaalselt,
+  // ilma võrgupäringuta) ja vajadusel värskendab sessiooni.
   try {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    const { data } = await supabase.auth.getClaims();
+    const hasUser = Boolean(data?.claims?.sub);
 
-    if (!user && shouldCreateAnonymousSession(request)) {
+    if (!hasUser && shouldCreateAnonymousSession(request)) {
       const { error } = await supabase.auth.signInAnonymously();
       if (error) console.error("[backend] anonüümne sisselogimine ebaõnnestus:", error.code ?? error.message);
     }

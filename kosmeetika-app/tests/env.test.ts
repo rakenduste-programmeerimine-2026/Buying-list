@@ -5,12 +5,27 @@ afterEach(() => vi.unstubAllEnvs());
 
 describe("getSupabaseEnv", () => {
   it("tagastab väärtused", () => {
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", "");
     vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://abc.supabase.co");
     vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "anon");
-    expect(getSupabaseEnv()).toEqual({ url: "https://abc.supabase.co", anonKey: "anon" });
+    expect(getSupabaseEnv()).toEqual({ url: "https://abc.supabase.co", publicKey: "anon" });
+  });
+
+  it("eelistab uut publishable võtit", () => {
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://abc.supabase.co");
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "anon");
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", "sb_publishable_x");
+    expect(getSupabaseEnv().publicKey).toBe("sb_publishable_x");
+  });
+
+  it("keeldub salajasest võtmest avalikus muutujas", () => {
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://abc.supabase.co");
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", "sb_secret_abc");
+    expect(() => getSupabaseEnv()).toThrow(/sb_secret_/);
   });
 
   it("viskab selge vea, kui muutujad puuduvad", () => {
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", "");
     vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "");
     vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "");
     expect(() => getSupabaseEnv()).toThrow(/NEXT_PUBLIC_SUPABASE_URL/);

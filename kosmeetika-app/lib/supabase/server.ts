@@ -11,10 +11,10 @@ import { getSupabaseEnv } from "./env";
  * Küpsiste kaudu liigub kasutaja sessioon, kui rakendusse lisatakse Supabase Auth.
  */
 export async function createClient() {
-  const { url, anonKey } = getSupabaseEnv();
+  const { url, publicKey } = getSupabaseEnv();
   const cookieStore = await cookies();
 
-  return createServerClient<Database>(url, anonKey, {
+  return createServerClient<Database>(url, publicKey, {
     cookies: {
       getAll() {
         return cookieStore.getAll();

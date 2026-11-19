@@ -21,15 +21,16 @@ export async function withDb<T>(
 ): Promise<ActionResult<T>> {
   let db: DbClient;
   try {
-    db = (await createClient()) as unknown as DbClient;
+    db = await createClient();
   } catch (err) {
     return mapUnexpected(err, context);
   }
 
   try {
-    // getUser() kontrollib tokenit Supabase'i Auth serveris (getSession() ei kontrolli).
-    const { data, error } = await db.auth.getUser();
-    if (error || !data.user) return failure("UNAUTHORIZED", NOT_SIGNED_IN);
+    // getClaims() kontrollib JWT allkirja (getSession() EI kontrolli, seda ei tohi
+    // serveris usaldada). Asümmeetriliste võtmete korral ilma võrgupäringuta.
+    const { data, error } = await db.auth.getClaims();
+    if (error || !data?.claims?.sub) return failure("UNAUTHORIZED", NOT_SIGNED_IN);
   } catch (err) {
     return mapUnexpected(err, context);
   }
