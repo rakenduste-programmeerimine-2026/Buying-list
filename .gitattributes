@@ -1,0 +1,3 @@
+# Shelliskriptid peavad jääma LF reavahetustega ka Windowsis (core.autocrlf).
+*.sh text eol=lf
+*.sql text eol=lf
