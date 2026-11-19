@@ -1,8 +1,10 @@
 # Backend (Next.js + Supabase)
 
 Backend ühendab Next.js rakenduse Supabase'iga ja annab frontendile valmis
-funktsioonid poodide ja toodete haldamiseks. Kõik on kaustas `kosmeetika-app/`,
-samas Next.js projektis, kus on frontend.
+funktsioonid poodide ja toodete haldamiseks. Backendi kood on kaustas
+`kosmeetika-app/backend/`, samas Next.js projektis, kus on frontend (`kosmeetika-app/frontend/`).
+Allpool toodud failiteed (`lib/…`, `supabase/…`, `types/…`, `tests/…`) on kausta
+`kosmeetika-app/backend/` suhtes; `npm` käske käivita kaustas `kosmeetika-app/`.
 
 ## Ülevaade
 
@@ -77,7 +79,7 @@ käivitumast, kui seal on `sb_secret_` võti).
 skeemi muutmist genereeri need uuesti:
 
 ```bash
-npx supabase gen types typescript --project-id <projekti-id> > types/database.ts
+npx supabase gen types typescript --project-id <projekti-id> > backend/types/database.ts
 ```
 
 ## Funktsioonid (Server Actions)

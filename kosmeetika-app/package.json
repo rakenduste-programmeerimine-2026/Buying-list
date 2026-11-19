@@ -10,8 +10,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
-    "test:db": "bash supabase/tests/run.sh",
-    "lint:backend": "eslint lib/data lib/actions lib/http lib/supabase app/api app/auth types tests middleware.ts",
+    "test:db": "bash backend/supabase/tests/run.sh",
+    "lint:backend": "eslint backend app/api app/auth middleware.ts",
     "test:coverage": "vitest run --coverage",
     "check": "npm run typecheck && npm run lint:backend && npm run test:coverage"
   },
