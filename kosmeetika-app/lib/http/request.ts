@@ -12,24 +12,39 @@ export const MAX_BODY_BYTES = 2048;
  */
 export function checkSameOrigin(request: Request): Failure | null {
   const fetchSite = request.headers.get("sec-fetch-site");
-  if (fetchSite && fetchSite !== "same-origin" && fetchSite !== "none") {
-    return failure("FORBIDDEN", "Päring teiselt saidilt ei ole lubatud.");
-  }
+  if (fetchSite && fetchSite !== "same-origin" && fetchSite !== "none") return crossSite();
 
   const origin = request.headers.get("origin");
   if (!origin) return null;
 
-  const host = request.headers.get("x-forwarded-host") ?? request.headers.get("host");
-  let originHost: string;
+  let originUrl: URL;
   try {
-    originHost = new URL(origin).host;
+    originUrl = new URL(origin);
   } catch {
-    return failure("FORBIDDEN", "Päring teiselt saidilt ei ole lubatud.");
+    return crossSite();
   }
-  if (!host || originHost !== host) {
-    return failure("FORBIDDEN", "Päring teiselt saidilt ei ole lubatud.");
+
+  // Proksi taga (Vercel, nginx, Cloudflare) on päris host x-forwarded-host päises.
+  // See võib sisaldada mitut väärtust („a.ee, b.ee“) ja vaikimisi porti („a.ee:443“).
+  const forwardedHost = request.headers.get("x-forwarded-host")?.split(",")[0]?.trim();
+  const host = forwardedHost || request.headers.get("host");
+  const proto =
+    request.headers.get("x-forwarded-proto")?.split(",")[0]?.trim() || originUrl.protocol.replace(":", "");
+  if (!host || normalizeHost(originUrl.host, originUrl.protocol) !== normalizeHost(host, `${proto}:`)) {
+    return crossSite();
   }
   return null;
+}
+
+function crossSite(): Failure {
+  return failure("FORBIDDEN", "Päring teiselt saidilt ei ole lubatud.");
+}
+
+/** Väiketähed ja vaikimisi port (http:80, https:443) eemaldatud. */
+export function normalizeHost(host: string, protocol: string): string {
+  const h = host.trim().toLowerCase();
+  const defaultPort = protocol === "https:" ? ":443" : protocol === "http:" ? ":80" : null;
+  return defaultPort && h.endsWith(defaultPort) ? h.slice(0, -defaultPort.length) : h;
 }
 
 /**
