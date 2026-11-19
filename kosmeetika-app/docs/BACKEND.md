@@ -38,7 +38,9 @@ cp .env.example .env.development.local
 ```
 
 Täida `NEXT_PUBLIC_SUPABASE_URL` ja `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-(Supabase → Project Settings → API) ning pane `NEXT_PUBLIC_USE_MOCK=false`.
+(Supabase → Project Settings → API Keys) ning pane `NEXT_PUBLIC_USE_MOCK=false`.
+Uuemates projektides võib anon-võtme asemel panna
+`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_...` (seda eelistatakse).
 
 > Miks `.env.development.local`, mitte `.env.local`? Frontendi harus on
 > `.env.local` gitis (`NEXT_PUBLIC_USE_MOCK=true`). Next.js eelistab
@@ -46,8 +48,9 @@ Täida `NEXT_PUBLIC_SUPABASE_URL` ja `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 > võtmed ei lähe kogemata gitti. Tootmises (`npm run build`) kasuta
 > `.env.production.local` faili või hostingu keskkonnamuutujaid.
 
-🔒 Kasuta **ainult** anon/publishable võtit. `service_role` võti ei tohi kunagi
-olla `NEXT_PUBLIC_` muutujas ega frontendis.
+🔒 Kasuta **ainult** anon/publishable võtit. `service_role` / `sb_secret_` võti ei
+tohi kunagi olla `NEXT_PUBLIC_` muutujas ega frontendis (rakendus keeldub
+käivitumast, kui seal on `sb_secret_` võti).
 
 ### 2. Supabase'i seaded (teeb Supabase'i poole inimene)
 
@@ -153,7 +156,21 @@ Veavastus: `{ "error": "Poe nimi ei tohi olla tühi.", "code": "VALIDATION" }`.
 | `CONFIG` | 503 | Supabase'i keskkonnamuutujad puuduvad |
 | `UNKNOWN` | 500 | muu viga (detailid ainult serveri logis) |
 
+## Sorteerimine
+
+Andmebaas sorteerib nagu ülesandes näidatud (`is_needed desc, name asc`).
+Seejärel järjestatakse tulemus **eesti tähestiku** järgi (`Intl.Collator("et")`),
+sest Supabase'i vaikimisi collation paneb õ, ä, ö, ü valesse kohta:
+
+- poed: `Apotheka, Douglas, Wella, Õnne pood, Ülo`
+- tooted: „vaja juurde“ eespool, mõlemad grupid tähestiku järgi
+- suur- ja väiketäht ei mõjuta järjekorda, „Toode 2“ tuleb enne „Toode 10“
+
 ## Valideerimine
+
+Reeglid on [Zod](https://zod.dev) skeemides (`lib/data/validation.ts`). Skeemid
+(`storeNameSchema`, `productNameSchema` jt) on eksporditud, nii et frontend võib
+kasutada täpselt samu reegleid.
 
 - nimest eemaldatakse algus- ja lõputühikud (ka NBSP jms), Unicode normaliseeritakse (NFC)
 - tühi nimi → viga; max 100 märki; juhtmärgid (reavahetus, NUL) keelatud
@@ -165,7 +182,8 @@ Veavastus: `{ "error": "Poe nimi ei tohi olla tühi.", "code": "VALIDATION" }`.
 - **RLS**: iga kasutaja näeb ja muudab ainult oma poode ja tooteid; anon-roll ei
   pääse tabelitele üldse ligi; toodet ei saa tõsta teise kasutaja poodi; poe
   omanikku ei saa vahetada. Testitud: `npm run test:db`.
-- **Sessioon**: `getUser()` (kontrollitakse Auth serveris), mitte `getSession()`.
+- **Sessioon**: `getClaims()` kontrollib JWT allkirja (asümmeetriliste võtmete
+  korral lokaalselt); `getSession()` tulemust serveris ei usaldata.
 - **Anonüümsed kasutajad** luuakse ainult tavalise lehe avamisel (mitte API, POST
   ega prefetch päringutega), et piirata massilist loomist.
 - **CSRF**: muutvad API päringud nõuavad `Content-Type: application/json` ja
@@ -177,13 +195,30 @@ Veavastus: `{ "error": "Poe nimi ei tohi olla tühi.", "code": "VALIDATION" }`.
 - **Open redirect**: `/auth/callback?next=` lubab ainult sama saidi teid.
 - **Vahemälu**: API vastustel `Cache-Control: no-store`; sessiooniküpsistega
   vastustele lisab `@supabase/ssr` ise no-cache päised.
+- **Turvapäised** (`next.config.ts`): `X-Content-Type-Options`, `X-Frame-Options`,
+  `Referrer-Policy`, `Permissions-Policy`, `Strict-Transport-Security`;
+  `X-Powered-By` on välja lülitatud.
 - `lib/supabase/server.ts` impordib `server-only`, seega serveri klienti ei saa
   kogemata brauseri bundle'isse lisada.
 
-## Testid
+## Testid ja kvaliteet
 
 ```bash
-npm test            # unit + API testid (vitest), Supabase'i pole vaja
-npm run typecheck   # TypeScript
-npm run test:db     # RLS testid lokaalses Postgres'is (PGHOST/PGPORT/PGUSER)
+npm test               # unit + API testid (Vitest), Supabase'i pole vaja
+npm run test:coverage  # sama + katvus (piir: 90% ridu/funktsioone, 85% harusid)
+npm run typecheck      # TypeScript
+npm run lint:backend   # ESLint (typescript-eslint, tüübiteadlik) backendi failidele
+npm run check          # kõik ülaltoodud korraga
+npm run test:db        # RLS testid lokaalses Postgres'is (PGHOST/PGPORT/PGUSER)
 ```
+
+GitHub Actions (`.github/workflows/backend.yml`) käivitab iga PR-i peal
+typecheck'i, lint'i, testid koos katvusega, RLS testid päris Postgres'is ja
+Next.js build'i.
+
+## Teadaolevad piirangud
+
+- Anonüümne kasutaja on seotud seadme küpsisega: teises seadmes on teine nimekiri,
+  kuni frontend lisab konto sidumise (`upgradeAnonymousUser`).
+- `npm audit` näitab Next.js 15 sõltuvuses (postcss) hoiatust; parandus on Next.js 16,
+  mis on suurem uuendus ja tuleks teha koos frontendiga.

@@ -130,31 +130,36 @@ Backendi ülesanne on ühendada Next.js rakendus Supabase'iga ja pakkuda fronten
  
 #### Ülesanded
  
-- [ ] **Supabase'i kliendi seadistamine**
+- [x] **Supabase'i kliendi seadistamine**
   - `lib/supabase/client.ts` – brauseri klient
   - `lib/supabase/server.ts` – serveri klient (`@supabase/ssr`)
-- [ ] **TypeScripti tüübid**
+- [x] **TypeScripti tüübid**
   - Genereeri tüübid Supabase'i skeemist:
 ```bash
 npx supabase gen types typescript --project-id <projekti-id> > src/types/database.ts
 ```
-- [ ] **Poodide funktsioonid** (`lib/actions/stores.ts`)
+- [x] **Poodide funktsioonid** (`lib/actions/stores.ts`)
   - `getStores()` – kõigi poodide loetelu (tähestiku järjekorras)
   - `getStoreById(id)` – ühe poe andmed
   - `createStore(name)` – uue poe lisamine
   - *(valikuline)* `updateStore(id, name)`, `deleteStore(id)`
-- [ ] **Toodete funktsioonid** (`lib/actions/products.ts`)
+- [x] **Toodete funktsioonid** (`lib/actions/products.ts`)
   - `getProductsByStore(storeId)` – poe tooted, sorteeritud nii, et `is_needed = true` tooted on **eespool**
   - `createProduct(storeId, name)` – uue toote lisamine
   - `toggleProductNeeded(id, isNeeded)` – „vaja juurde“ märke muutmine
   - *(valikuline)* `updateProduct(id, name)`, `deleteProduct(id)`
-- [ ] **Valideerimine**
+- [x] **Valideerimine**
   - Tühja nimega poodi ega toodet ei saa lisada
   - Nimedest eemaldatakse algus- ja lõputühikud
-- [ ] **Veahaldus**
+- [x] **Veahaldus**
   - Funktsioonid tagastavad selge veateate, mida frontend saab kasutajale näidata
 - [ ] **Turvalisus**
   - Kontrolli koos Supabase'i poolega, et Row Level Security (RLS) reeglid on paigas
+  - RLS SQL on valmis ja testitud (`kosmeetika-app/supabase/sql/`), tuleb käivitada Supabase'is
+
+> ✅ Backend on valmis: kood kaustas `kosmeetika-app/` (`lib/supabase`, `lib/actions`, `lib/data`, `app/api`, `types/database.ts`).
+> Seadistus, funktsioonide ja API kirjeldus ning turvalisus: [`kosmeetika-app/docs/BACKEND.md`](kosmeetika-app/docs/BACKEND.md).
+
 #### Sorteerimise näide
  
 ```ts
