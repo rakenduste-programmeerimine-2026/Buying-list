@@ -55,8 +55,10 @@ käivitumast, kui seal on `sb_secret_` võti).
 ### 2. Supabase'i seaded (teeb Supabase'i poole inimene)
 
 1. **Authentication → Sign In / Providers → Allow anonymous sign-ins**: sisse.
-2. Soovitatav: **Authentication → Attack Protection**: lülita sisse CAPTCHA
-   või jäta anonüümsete kasutajate loomise piirang (rate limit) vaikimisi peale.
+2. **Authentication → Rate Limits → Anonymous sign-ins**: anonüümsed kasutajad
+   luuakse Next.js serverist, seega Supabase näeb kõiki külastajaid ühe IP-na.
+   Vaikimisi piir (30 tunnis) on ühe kosmeetiku jaoks piisav; avalikuks
+   kasutamiseks tõsta see (nt 300). Robotid ja lingi eelvaated kasutajat ei loo.
 3. **Authentication → URL Configuration → Redirect URLs**: lisa
    `http://localhost:3000/auth/callback` ja tootmisaadress.
 4. SQL Editoris käivita järjest:
