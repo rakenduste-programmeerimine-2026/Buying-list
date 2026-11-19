@@ -28,9 +28,9 @@ export function checkSameOrigin(request: Request): Failure | null {
   // See võib sisaldada mitut väärtust („a.ee, b.ee“) ja vaikimisi porti („a.ee:443“).
   const forwardedHost = request.headers.get("x-forwarded-host")?.split(",")[0]?.trim();
   const host = forwardedHost || request.headers.get("host");
-  const forwardedProto = request.headers.get("x-forwarded-proto")?.split(",")[0]?.trim().toLowerCase();
-  // Skeem kuulub päritolu juurde: http://sait ≠ https://sait.
-  if (forwardedProto && originUrl.protocol !== `${forwardedProto}:`) return crossSite();
+  // Skeemi (http/https) siin ei võrrelda: proksiahelates on x-forwarded-proto
+  // sageli vale („http“ viimasel sammul). http-versiooni kaudu ründamise
+  // takistab HSTS päis (next.config.ts), mis sunnib brauseri https-ile.
   if (!host || normalizeHost(originUrl.host, originUrl.protocol) !== normalizeHost(host, originUrl.protocol)) {
     return crossSite();
   }

@@ -128,15 +128,16 @@ describe("POST /api/stores", () => {
     expect(res.status).toBe(201);
   });
 
-  it("http:// päritolu https saidil on keelatud (skeem on osa päritolust)", async () => {
+  it("proksiahel, kus x-forwarded-proto on „http“, ei murra https saiti", async () => {
+    state.fake!.respond({ data: store() });
     const res = await storesRoute.POST(
       req("/api/stores", {
         method: "POST",
         body: { name: "x" },
-        headers: { "x-forwarded-host": "kosmeetik.ee", "x-forwarded-proto": "https", origin: "http://kosmeetik.ee" },
+        headers: { "x-forwarded-host": "kosmeetik.ee", "x-forwarded-proto": "http", origin: "https://kosmeetik.ee" },
       }),
     );
-    expect(res.status).toBe(403);
+    expect(res.status).toBe(201);
   });
 
   it("proksi taga teine sait on endiselt keelatud", async () => {
