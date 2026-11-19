@@ -9,6 +9,7 @@ type CookieOpts = {
 };
 const state = vi.hoisted(() => ({
   claims: null as { sub: string } | null,
+  claimsError: null as { name: string; status?: number; message: string } | null,
   signIn: vi.fn(),
   opts: null as CookieOpts | null,
   throwOnClaims: false,
@@ -21,7 +22,7 @@ vi.mock("@supabase/ssr", () => ({
       auth: {
         getClaims: async () => {
           if (state.throwOnClaims) throw new Error("network");
-          return { data: state.claims ? { claims: state.claims } : null, error: null };
+          return { data: state.claims ? { claims: state.claims } : null, error: state.claimsError };
         },
         signInAnonymously: async () => {
           await state.signIn();
@@ -44,6 +45,7 @@ beforeEach(() => {
   vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "anon");
   state.claims = null;
   state.throwOnClaims = false;
+  state.claimsError = null;
   state.signIn = vi.fn();
 });
 
@@ -78,6 +80,19 @@ describe("updateSession", () => {
     vi.spyOn(console, "error").mockImplementation(() => undefined);
     const res = await updateSession(page());
     expect(res.status).toBe(200);
+  });
+
+  it("Auth teenuse ajutine viga → olemasolevat sessiooni ei asendata uue anonüümsega", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    state.claimsError = { name: "AuthRetryableFetchError", status: 503, message: "fetch failed" };
+    await updateSession(page());
+    expect(state.signIn).not.toHaveBeenCalled();
+  });
+
+  it("vigane/aegunud token (mitte ajutine viga) → uus anonüümne sessioon", async () => {
+    state.claimsError = { name: "AuthInvalidJwtError", status: 400, message: "invalid JWT" };
+    await updateSession(page());
+    expect(state.signIn).toHaveBeenCalledOnce();
   });
 
   it("küpsised loetakse päringust", async () => {

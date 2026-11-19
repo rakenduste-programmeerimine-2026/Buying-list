@@ -40,6 +40,7 @@ export function mapDbError(error: DbError, entity: Entity, context: string): Fai
     case "42501": // RLS / õigused
     case "PGRST301": // JWT probleem
     case "PGRST302":
+      logServerError(context, error);
       return failure("FORBIDDEN", "Sul pole selle toimingu jaoks õigust.");
     default:
       logServerError(context, error);
@@ -55,7 +56,8 @@ export function mapDbError(error: DbError, entity: Entity, context: string): Fai
 export function isTransientAuthError(error: unknown): boolean {
   if (!error || typeof error !== "object") return false;
   const e = error as { name?: string; status?: number };
-  if (e.name === "AuthRetryableFetchError") return true;
+  // AuthRetryableFetchError: võrk; AuthUnknownError: nt HTML 500 leht gateway'st.
+  if (e.name === "AuthRetryableFetchError" || e.name === "AuthUnknownError") return true;
   return typeof e.status === "number" && (e.status === 0 || e.status >= 500);
 }
 

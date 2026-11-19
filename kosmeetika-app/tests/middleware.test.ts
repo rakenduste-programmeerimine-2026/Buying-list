@@ -33,12 +33,20 @@ describe("shouldCreateAnonymousSession", () => {
     "curl/8.0",
     "Mozilla/5.0 HeadlessChrome/120",
     "UptimeRobot/2.0",
+    "TelegramBot (like TwitterBot)",
+    "Mozilla/5.0 (compatible; Discordbot/2.0; +https://discordapp.com)",
+    "Mozilla/5.0 (compatible; bingbot/2.0)",
   ])("robot %s ei loo kasutajat", (ua) => {
     expect(shouldCreateAnonymousSession(req("/", { headers: { accept: "text/html", "user-agent": ua } }))).toBe(false);
   });
 
-  it("tavaline mobiilibrauser loob kasutaja", () => {
-    const ua = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Version/18.0 Mobile Safari/604.1";
+  it.each([
+    "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Version/18.0 Mobile Safari/604.1",
+    "Mozilla/5.0 (Linux; Android 10; CUBOT X30) AppleWebKit/537.36 Chrome/120.0 Mobile Safari/537.36",
+    "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 Chrome/120.0 Mobile Safari/537.36 Telegram-Android/10.0",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0 Safari/537.36 Edg/120.0",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0) AppleWebKit/537.36 discord/1.0.9 Chrome/120 Electron/28 Safari/537.36",
+  ])("päris brauser loob kasutaja: %s", (ua) => {
     expect(shouldCreateAnonymousSession(req("/", { headers: { accept: "text/html", "user-agent": ua } }))).toBe(true);
   });
 

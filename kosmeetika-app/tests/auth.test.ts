@@ -160,6 +160,13 @@ describe("upgradeAnonymousUser / setPassword", () => {
     expect(await setPassword(fake.db, "salasona1")).toMatchObject({ code: "UNAUTHORIZED" });
   });
 
+  it("Auth server maas → „proovi hiljem“, mitte „pole sisse logitud“", async () => {
+    const fake = createFakeSupabase();
+    authOf(fake).getUser = async () => ({ data: { user: null }, error: { name: "AuthRetryableFetchError", status: 503 } });
+    expect(await upgradeAnonymousUser(fake.db, "a@b.ee")).toMatchObject({ code: "UNKNOWN" });
+    expect(await setPassword(fake.db, "salasona1")).toMatchObject({ code: "UNKNOWN" });
+  });
+
   it("setPassword nõuab e-postiga kontot", async () => {
     const fake = createFakeSupabase();
     expect(await setPassword(fake.db, "salasona1")).toMatchObject({ code: "VALIDATION" });

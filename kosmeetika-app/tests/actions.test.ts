@@ -54,6 +54,14 @@ describe("store actions", () => {
     });
   });
 
+  it("Auth tagastab HTML 500 (AuthUnknownError) → UNKNOWN", async () => {
+    (state.fake!.auth as unknown as Record<string, unknown>).getClaims = async () => ({
+      data: null,
+      error: { name: "AuthUnknownError", message: "Unexpected token <" },
+    });
+    expect(await storeActions.getStores()).toMatchObject({ code: "UNKNOWN" });
+  });
+
   it("aegunud/vigane token → UNAUTHORIZED", async () => {
     (state.fake!.auth as unknown as Record<string, unknown>).getClaims = async () => ({
       data: null,
@@ -77,7 +85,7 @@ describe("store actions", () => {
   });
 
   it("updateStore värskendab avalehe ja poe lehe", async () => {
-    state.fake!.respond({ data: store({ name: "Uus" }) });
+    state.fake!.respond({ data: { ...store({ name: "Uus" }), products: [] } });
     await storeActions.updateStore(STORE_ID, "Uus");
     expect(revalidatePath).toHaveBeenCalledWith("/");
     expect(revalidatePath).toHaveBeenCalledWith(`/stores/${STORE_ID}`);

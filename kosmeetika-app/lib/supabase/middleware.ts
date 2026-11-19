@@ -1,7 +1,16 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import type { Database } from "@/types/database";
+import { isTransientAuthError } from "@/lib/data/errors";
 import { getSupabaseEnv } from "./env";
+
+// Robotid, lingi eelvaated ja monitooring ei vaja kasutajat. Supabase piirab
+// anonüümsete kasutajate loomist IP kohta ning kuna see päring tuleb meie
+// serverist, jagavad kõik külastajad sama limiiti — robotid ei tohi seda kulutada.
+// Ainult konkreetsed tunnused sõnapiiridega: nt „Cubot“ telefon või Telegrami
+// rakendusesisene brauser EI ole robotid.
+const BOT_RE =
+  /\bbot\b|\b(?:googlebot|bingbot|duckduckbot|yandexbot|baiduspider|applebot|slackbot(?:-linkexpanding)?|twitterbot|linkedinbot|discordbot|telegrambot|facebookexternalhit|facebookcatalog|embedly|crawler|spider|headlesschrome|lighthouse|uptimerobot|pingdom|curl|wget|python-requests|go-http-client)\b|^whatsapp\//i;
 
 /**
  * Kas sellele päringule võib luua anonüümse sessiooni?
@@ -10,12 +19,6 @@ import { getSupabaseEnv } from "./env";
  * anonüümset kasutajat ei loo, et keegi ei saaks skriptiga tuhandeid
  * kasutajaid tekitada. Frontend avab alati enne lehe, seega küpsis on olemas.
  */
-// Robotid, lingi eelvaated ja monitooring ei vaja kasutajat. Supabase piirab
-// anonüümsete kasutajate loomist IP kohta ning kuna see päring tuleb meie
-// serverist, jagavad kõik külastajad sama limiiti — robotid ei tohi seda kulutada.
-const BOT_RE =
-  /bot|crawl|spider|slurp|preview|facebookexternalhit|embedly|whatsapp|telegram|discord|slack|skype|curl|wget|python-requests|httpclient|headless|lighthouse|monitor|uptime|pingdom/i;
-
 export function shouldCreateAnonymousSession(request: NextRequest): boolean {
   if (request.method !== "GET") return false;
   if (BOT_RE.test(request.headers.get("user-agent") ?? "")) return false;
@@ -66,10 +69,14 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
   // getClaims() kontrollib JWT allkirja (asümmeetriliste võtmete korral lokaalselt,
   // ilma võrgupäringuta) ja vajadusel värskendab sessiooni.
   try {
-    const { data } = await supabase.auth.getClaims();
-    const hasUser = Boolean(data?.claims?.sub);
+    const { data, error: claimsError } = await supabase.auth.getClaims();
+    const hasUser = Boolean(data?.claims.sub);
 
-    if (!hasUser && shouldCreateAnonymousSession(request)) {
+    // Auth teenuse ajutine viga EI tähenda, et kasutajat pole: uut anonüümset
+    // kasutajat ei looda, muidu kaoks olemasoleva kasutaja sessioon (ja nimekiri).
+    if (claimsError && isTransientAuthError(claimsError)) {
+      console.error("[backend] sessiooni kontroll ebaõnnestus ajutiselt:", claimsError.message);
+    } else if (!hasUser && shouldCreateAnonymousSession(request)) {
       const { error } = await supabase.auth.signInAnonymously();
       if (error) {
         console.error(

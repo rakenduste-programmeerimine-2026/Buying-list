@@ -140,6 +140,7 @@ export async function upgradeAnonymousUser(
   if (!e.ok) return e;
   return guard("upgradeAnonymousUser", async () => {
     const current = await db.auth.getUser();
+    if (current.error && isTransientAuthError(current.error)) return authUnavailable("upgradeAnonymousUser", current.error);
     if (current.error || !current.data.user) return failure("UNAUTHORIZED", "Sa ei ole sisse logitud.");
     if (!current.data.user.is_anonymous) return failure("CONFLICT", "Konto on juba e-postiga seotud.");
     const { error } = await db.auth.updateUser({ email: e.value }, emailRedirectTo ? { emailRedirectTo } : undefined);
@@ -154,6 +155,7 @@ export async function setPassword(db: DbClient, password: unknown): Promise<Acti
   if (!p.ok) return p;
   return guard("setPassword", async () => {
     const current = await db.auth.getUser();
+    if (current.error && isTransientAuthError(current.error)) return authUnavailable("setPassword", current.error);
     if (current.error || !current.data.user) return failure("UNAUTHORIZED", "Sa ei ole sisse logitud.");
     if (current.data.user.is_anonymous) return failure("VALIDATION", "Seo enne konto e-postiga.");
     const { error } = await db.auth.updateUser({ password: p.value });
