@@ -25,6 +25,23 @@ describe("shouldCreateAnonymousSession", () => {
     expect(shouldCreateAnonymousSession(req("/", { method: "POST", headers: { accept: "text/html" } }))).toBe(false);
   });
 
+  it.each([
+    "Mozilla/5.0 (compatible; Googlebot/2.1)",
+    "Slackbot-LinkExpanding 1.0",
+    "facebookexternalhit/1.1",
+    "WhatsApp/2.23",
+    "curl/8.0",
+    "Mozilla/5.0 HeadlessChrome/120",
+    "UptimeRobot/2.0",
+  ])("robot %s ei loo kasutajat", (ua) => {
+    expect(shouldCreateAnonymousSession(req("/", { headers: { accept: "text/html", "user-agent": ua } }))).toBe(false);
+  });
+
+  it("tavaline mobiilibrauser loob kasutaja", () => {
+    const ua = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Version/18.0 Mobile Safari/604.1";
+    expect(shouldCreateAnonymousSession(req("/", { headers: { accept: "text/html", "user-agent": ua } }))).toBe(true);
+  });
+
   it("auth callback ei loo anonüümset kasutajat", () => {
     expect(shouldCreateAnonymousSession(req("/auth/callback", { headers: { accept: "text/html" } }))).toBe(false);
   });

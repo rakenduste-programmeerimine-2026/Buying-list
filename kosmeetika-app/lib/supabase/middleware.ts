@@ -10,8 +10,15 @@ import { getSupabaseEnv } from "./env";
  * anonüümset kasutajat ei loo, et keegi ei saaks skriptiga tuhandeid
  * kasutajaid tekitada. Frontend avab alati enne lehe, seega küpsis on olemas.
  */
+// Robotid, lingi eelvaated ja monitooring ei vaja kasutajat. Supabase piirab
+// anonüümsete kasutajate loomist IP kohta ning kuna see päring tuleb meie
+// serverist, jagavad kõik külastajad sama limiiti — robotid ei tohi seda kulutada.
+const BOT_RE =
+  /bot|crawl|spider|slurp|preview|facebookexternalhit|embedly|whatsapp|telegram|discord|slack|skype|curl|wget|python-requests|httpclient|headless|lighthouse|monitor|uptime|pingdom/i;
+
 export function shouldCreateAnonymousSession(request: NextRequest): boolean {
   if (request.method !== "GET") return false;
+  if (BOT_RE.test(request.headers.get("user-agent") ?? "")) return false;
   const path = request.nextUrl.pathname;
   if (path.startsWith("/api/") || path.startsWith("/auth/")) return false;
   // Next.js eellaadimine (prefetch) ei tohi kasutajat luua.
@@ -64,7 +71,14 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
 
     if (!hasUser && shouldCreateAnonymousSession(request)) {
       const { error } = await supabase.auth.signInAnonymously();
-      if (error) console.error("[backend] anonüümne sisselogimine ebaõnnestus:", error.code ?? error.message);
+      if (error) {
+        console.error(
+          error.code === "over_request_rate_limit"
+            ? "[backend] anonüümsete kasutajate limiit täis: tõsta Supabase → Authentication → Rate Limits"
+            : "[backend] anonüümne sisselogimine ebaõnnestus:",
+          error.code ?? error.message,
+        );
+      }
     }
   } catch (err) {
     console.error("[backend] sessiooni värskendamine ebaõnnestus:", (err as Error).message);
