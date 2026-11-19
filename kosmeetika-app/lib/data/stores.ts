@@ -7,6 +7,16 @@ import { sortStores } from "./sort";
 
 const STORE_COLUMNS = "id, name, created_at";
 
+type StoreRowWithProducts = Store & { products: { is_needed: boolean }[] | null };
+
+function withCounts({ products, ...store }: StoreRowWithProducts): StoreWithCounts {
+  return {
+    ...store,
+    product_count: products?.length ?? 0,
+    needed_count: products?.filter((p) => p.is_needed).length ?? 0,
+  };
+}
+
 /** Kõik poed tähestiku järjekorras. */
 export async function getStores(db: DbClient): Promise<ActionResult<Store[]>> {
   try {
@@ -32,16 +42,28 @@ export async function getStoresWithCounts(db: DbClient): Promise<ActionResult<St
       .order("created_at", { ascending: true });
     if (error) return mapDbError(error, "store", "getStoresWithCounts");
 
-    const rows = (data ?? []) as Array<Store & { products: { is_needed: boolean }[] | null }>;
-    return success(
-      sortStores(rows).map(({ products, ...store }) => ({
-        ...store,
-        product_count: products?.length ?? 0,
-        needed_count: products?.filter((p) => p.is_needed).length ?? 0,
-      })),
-    );
+    const rows = (data ?? []) as StoreRowWithProducts[];
+    return success(sortStores(rows).map(withCounts));
   } catch (err) {
     return mapUnexpected(err, "getStoresWithCounts");
+  }
+}
+
+/** Ühe poe andmed koos toodete arvuga (nt pärast nime muutmist). */
+export async function getStoreWithCountsById(db: DbClient, id: unknown): Promise<ActionResult<StoreWithCounts>> {
+  const idCheck = validateId(id, "store");
+  if (!idCheck.ok) return idCheck;
+  try {
+    const { data, error } = await db
+      .from("stores")
+      .select(`${STORE_COLUMNS}, products(is_needed)`)
+      .eq("id", idCheck.value)
+      .maybeSingle();
+    if (error) return mapDbError(error, "store", "getStoreWithCountsById");
+    if (!data) return notFound("store");
+    return success(withCounts(data as StoreRowWithProducts));
+  } catch (err) {
+    return mapUnexpected(err, "getStoreWithCountsById");
   }
 }
 
@@ -63,7 +85,7 @@ export async function getStoreById(db: DbClient, id: unknown): Promise<ActionRes
 export async function getStoreWithProducts(db: DbClient, id: unknown): Promise<ActionResult<StoreWithProducts>> {
   const store = await getStoreById(db, id);
   if (!store.ok) return store;
-  const products = await getProductsByStore(db, store.data.id);
+  const products = await getProductsByStore(db, store.data.id, { storeKnownToExist: true });
   if (!products.ok) return products;
   return success({ ...store.data, products: products.data });
 }

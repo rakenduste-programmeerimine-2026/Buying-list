@@ -116,6 +116,29 @@ describe("POST /api/stores", () => {
     expect(res.status).toBe(403);
   });
 
+  it.each([
+    ["mitu väärtust", { "x-forwarded-host": "kosmeetik.ee, internal:3000", "x-forwarded-proto": "https" }, "https://kosmeetik.ee"],
+    ["vaikimisi port", { "x-forwarded-host": "kosmeetik.ee:443", "x-forwarded-proto": "https" }, "https://kosmeetik.ee"],
+    ["suurtähed", { "x-forwarded-host": "Kosmeetik.EE" }, "https://kosmeetik.ee"],
+  ])("lubab proksi taga sama saidi päringu (%s)", async (_label, headers, origin) => {
+    state.fake!.respond({ data: store() });
+    const res = await storesRoute.POST(
+      req("/api/stores", { method: "POST", body: { name: "x" }, headers: { ...headers, origin } }),
+    );
+    expect(res.status).toBe(201);
+  });
+
+  it("proksi taga teine sait on endiselt keelatud", async () => {
+    const res = await storesRoute.POST(
+      req("/api/stores", {
+        method: "POST",
+        body: { name: "x" },
+        headers: { "x-forwarded-host": "kosmeetik.ee", origin: "https://kosmeetik.ee.evil.example" },
+      }),
+    );
+    expect(res.status).toBe(403);
+  });
+
   it("lubab sama päritoluga päringu", async () => {
     state.fake!.respond({ data: store() });
     const res = await storesRoute.POST(
@@ -158,11 +181,20 @@ describe("/api/stores/:id", () => {
     expect(res.status).toBe(400);
   });
 
-  it("PATCH muudab nime", async () => {
-    state.fake!.respond({ data: store({ name: "Uus" }) });
+  it("PATCH muudab nime ja tagastab õiged toodete arvud", async () => {
+    state.fake!.respond(
+      { data: store({ name: "Uus" }) },
+      { data: { ...store({ name: "Uus" }), products: [{ is_needed: true }, { is_needed: false }] } },
+    );
     const res = await storeRoute.PATCH(req(`/api/stores/${STORE_ID}`, { method: "PATCH", body: { name: "Uus" } }), ctx(STORE_ID));
     expect(res.status).toBe(200);
-    expect((await res.json()).name).toBe("Uus");
+    expect(await res.json()).toEqual({ id: STORE_ID, name: "Uus", productCount: 2, neededCount: 1 });
+  });
+
+  it("PATCH puuduva poe korral 404", async () => {
+    state.fake!.respond({ data: null });
+    const res = await storeRoute.PATCH(req(`/api/stores/${STORE_ID}`, { method: "PATCH", body: { name: "Uus" } }), ctx(STORE_ID));
+    expect(res.status).toBe(404);
   });
 
   it("DELETE → 204", async () => {
@@ -208,6 +240,22 @@ describe("/api/stores/:id/products", () => {
     expect((await res.json()).error).toBe("Poodi ei leitud.");
   });
 
+  it("GET puuduva poe korral 404 (mitte tühi loetelu)", async () => {
+    state.fake!.respond({ data: [] }, { data: null });
+    const res = await storeProductsRoute.GET(req(`/api/stores/${STORE_ID}/products`), ctx(STORE_ID));
+    expect(res.status).toBe(404);
+  });
+
+  it("POST teise kasutaja poodi (RLS with check → 42501) → 404", async () => {
+    state.fake!.respond({ error: { code: "42501" } });
+    const res = await storeProductsRoute.POST(
+      req(`/api/stores/${STORE_ID}/products`, { method: "POST", body: { name: "X" } }),
+      ctx(STORE_ID),
+    );
+    expect(res.status).toBe(404);
+    expect((await res.json()).error).toBe("Poodi ei leitud.");
+  });
+
   it("GET tagastab tooted", async () => {
     state.fake!.respond({ data: [product()] });
     const res = await storeProductsRoute.GET(req(`/api/stores/${STORE_ID}/products`), ctx(STORE_ID));
@@ -217,9 +265,15 @@ describe("/api/stores/:id/products", () => {
 
 describe("POST /api/stores/:id/clear-needed", () => {
   it("→ 204", async () => {
-    state.fake!.respond({ data: [] });
+    state.fake!.respond({ data: [{ id: PRODUCT_ID }] });
     const res = await clearNeededRoute.POST(req(`/api/stores/${STORE_ID}/clear-needed`, { method: "POST" }), ctx(STORE_ID));
     expect(res.status).toBe(204);
+  });
+
+  it("puuduva poe korral 404", async () => {
+    state.fake!.respond({ data: [] }, { data: null });
+    const res = await clearNeededRoute.POST(req(`/api/stores/${STORE_ID}/clear-needed`, { method: "POST" }), ctx(STORE_ID));
+    expect(res.status).toBe(404);
   });
 
   it("teiselt saidilt → 403", async () => {
@@ -246,13 +300,15 @@ describe("/api/products/:id", () => {
     expect((await res.json()).name).toBe("Uus");
   });
 
-  it("PATCH { name, needed } muudab mõlemat", async () => {
-    state.fake!.respond({ data: product({ name: "Uus" }) }, { data: product({ name: "Uus", is_needed: true }) });
+  it("PATCH { name, needed } muudab mõlemat ÜHE päringuga", async () => {
+    state.fake!.respond({ data: product({ name: "Uus", is_needed: true }) });
     const res = await productRoute.PATCH(
-      req(`/api/products/${PRODUCT_ID}`, { method: "PATCH", body: { name: "Uus", needed: true } }),
+      req(`/api/products/${PRODUCT_ID}`, { method: "PATCH", body: { name: " Uus ", needed: true } }),
       ctx(PRODUCT_ID),
     );
     expect(await res.json()).toMatchObject({ name: "Uus", needed: true });
+    expect(state.fake!.calls).toHaveLength(1);
+    expect(state.fake!.argsOf("update")).toEqual([[{ name: "Uus", is_needed: true }]]);
   });
 
   it("PATCH vigase „needed“ korral ei muudeta ka nime (pole poolikut muudatust)", async () => {

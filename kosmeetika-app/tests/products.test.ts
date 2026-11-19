@@ -6,6 +6,7 @@ import {
   getProductsByStore,
   toggleProductNeeded,
   updateProduct,
+  updateProductFields,
 } from "@/lib/data/products";
 import { createFakeSupabase, product, PRODUCT_ID, STORE_ID } from "./helpers/fakeSupabase";
 
@@ -25,10 +26,23 @@ describe("getProductsByStore", () => {
     ]);
   });
 
-  it("tagastab tühja loetelu, kui tooteid pole", async () => {
+  it("tagastab tühja loetelu, kui poes pole tooteid", async () => {
     const fake = createFakeSupabase();
-    fake.respond({ data: [] });
+    fake.respond({ data: [] }, { data: { id: STORE_ID } });
     expect(await getProductsByStore(fake.db, STORE_ID)).toEqual({ ok: true, data: [] });
+    expect(fake.calls.map((c) => c.table)).toEqual(["products", "stores"]);
+  });
+
+  it("tagastab NOT_FOUND, kui poodi pole (või see on teise kasutaja oma)", async () => {
+    const fake = createFakeSupabase();
+    fake.respond({ data: [] }, { data: null });
+    expect(await getProductsByStore(fake.db, STORE_ID)).toMatchObject({ code: "NOT_FOUND", error: "Poodi ei leitud." });
+  });
+
+  it("poe kontrolli viga antakse edasi", async () => {
+    const fake = createFakeSupabase();
+    fake.respond({ data: [] }, { error: { code: "XX000" } });
+    expect(await getProductsByStore(fake.db, STORE_ID)).toMatchObject({ code: "UNKNOWN" });
   });
 
   it("keelab vigase poe ID", async () => {
@@ -127,6 +141,36 @@ describe("updateProduct", () => {
   });
 });
 
+describe("updateProductFields", () => {
+  it("ainult märge", async () => {
+    const fake = createFakeSupabase();
+    fake.respond({ data: product({ is_needed: true }) });
+    await updateProductFields(fake.db, PRODUCT_ID, { isNeeded: true });
+    expect(fake.argsOf("update")).toEqual([[{ is_needed: true }]]);
+  });
+
+  it("vigane väli → ühtegi päringut ei tehta", async () => {
+    const fake = createFakeSupabase();
+    expect(await updateProductFields(fake.db, PRODUCT_ID, { name: "Uus", isNeeded: "jah" })).toMatchObject({
+      code: "VALIDATION",
+    });
+    expect(await updateProductFields(fake.db, PRODUCT_ID, { name: "", isNeeded: true })).toMatchObject({
+      code: "VALIDATION",
+    });
+    expect(fake.calls).toHaveLength(0);
+  });
+
+  it("tühi muudatus → VALIDATION", async () => {
+    const fake = createFakeSupabase();
+    expect(await updateProductFields(fake.db, PRODUCT_ID, {})).toMatchObject({ code: "VALIDATION" });
+  });
+
+  it("vigane ID", async () => {
+    const fake = createFakeSupabase();
+    expect(await updateProductFields(fake.db, "x", { name: "a" })).toMatchObject({ error: "Vigane toote ID." });
+  });
+});
+
 describe("deleteProduct", () => {
   it("kustutab toote ja tagastab poe ID (vahemälu värskendamiseks)", async () => {
     const fake = createFakeSupabase();
@@ -153,6 +197,18 @@ describe("clearNeededProducts", () => {
       ["store_id", STORE_ID],
       ["is_needed", true],
     ]);
+  });
+
+  it("ühtegi märget polnud → kontrollib, et pood on olemas", async () => {
+    const fake = createFakeSupabase();
+    fake.respond({ data: [] }, { data: { id: STORE_ID } });
+    expect(await clearNeededProducts(fake.db, STORE_ID)).toEqual({ ok: true, data: { updated: 0 } });
+  });
+
+  it("puuduv pood → NOT_FOUND", async () => {
+    const fake = createFakeSupabase();
+    fake.respond({ data: [] }, { data: null });
+    expect(await clearNeededProducts(fake.db, STORE_ID)).toMatchObject({ code: "NOT_FOUND" });
   });
 
   it("ei uuenda kunagi ilma poe filtrita", async () => {

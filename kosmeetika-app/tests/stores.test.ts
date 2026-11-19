@@ -5,6 +5,7 @@ import {
   getStoreById,
   getStores,
   getStoresWithCounts,
+  getStoreWithCountsById,
   getStoreWithProducts,
   updateStore,
 } from "@/lib/data/stores";
@@ -95,6 +96,27 @@ describe("getStoreById", () => {
     const fake = createFakeSupabase();
     expect(await getStoreById(fake.db, "abc")).toMatchObject({ ok: false, code: "VALIDATION" });
     expect(fake.calls).toHaveLength(0);
+  });
+});
+
+describe("getStoreWithCountsById", () => {
+  it("tagastab poe koos arvudega", async () => {
+    const fake = createFakeSupabase();
+    fake.respond({ data: { ...store(), products: [{ is_needed: true }] } });
+    expect(await getStoreWithCountsById(fake.db, STORE_ID)).toEqual({
+      ok: true,
+      data: { ...store(), product_count: 1, needed_count: 1 },
+    });
+  });
+
+  it("NOT_FOUND / VALIDATION / viga", async () => {
+    const fake = createFakeSupabase();
+    fake.respond({ data: null }, { error: { code: "XX000" } });
+    expect(await getStoreWithCountsById(fake.db, STORE_ID)).toMatchObject({ code: "NOT_FOUND" });
+    expect(await getStoreWithCountsById(fake.db, STORE_ID)).toMatchObject({ code: "UNKNOWN" });
+    expect(await getStoreWithCountsById(fake.db, "x")).toMatchObject({ code: "VALIDATION" });
+    fake.throwOnNext();
+    expect(await getStoreWithCountsById(fake.db, STORE_ID)).toMatchObject({ code: "UNKNOWN" });
   });
 });
 
