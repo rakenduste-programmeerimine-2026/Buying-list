@@ -56,8 +56,9 @@ export function mapDbError(error: DbError, entity: Entity, context: string): Fai
 export function isTransientAuthError(error: unknown): boolean {
   if (!error || typeof error !== "object") return false;
   const e = error as { name?: string; status?: number };
-  // AuthRetryableFetchError: võrk; AuthUnknownError: nt HTML 500 leht gateway'st.
-  if (e.name === "AuthRetryableFetchError" || e.name === "AuthUnknownError") return true;
+  // auth-js annab võrguvigade ja 5xx vastuste (ka HTML 500 lehtede) korral
+  // AuthRetryableFetchError'i. AuthUnknownError (nt vigane JSON 4xx vastuses) ei ole ajutine.
+  if (e.name === "AuthRetryableFetchError") return true;
   return typeof e.status === "number" && (e.status === 0 || e.status >= 500);
 }
 

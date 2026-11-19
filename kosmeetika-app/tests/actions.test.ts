@@ -54,12 +54,20 @@ describe("store actions", () => {
     });
   });
 
-  it("Auth tagastab HTML 500 (AuthUnknownError) → UNKNOWN", async () => {
+  it("Auth tagastab HTML 500 (auth-js: AuthRetryableFetchError, status 500) → UNKNOWN", async () => {
     (state.fake!.auth as unknown as Record<string, unknown>).getClaims = async () => ({
       data: null,
-      error: { name: "AuthUnknownError", message: "Unexpected token <" },
+      error: { name: "AuthRetryableFetchError", status: 500, message: "HTTP 500" },
     });
     expect(await storeActions.getStores()).toMatchObject({ code: "UNKNOWN" });
+  });
+
+  it("AuthUnknownError (mitte ajutine) → UNAUTHORIZED, kasutaja saab uue sessiooni", async () => {
+    (state.fake!.auth as unknown as Record<string, unknown>).getClaims = async () => ({
+      data: null,
+      error: { name: "AuthUnknownError", message: "Unexpected token" },
+    });
+    expect(await storeActions.getStores()).toMatchObject({ code: "UNAUTHORIZED" });
   });
 
   it("aegunud/vigane token → UNAUTHORIZED", async () => {

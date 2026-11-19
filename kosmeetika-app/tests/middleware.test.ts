@@ -36,6 +36,13 @@ describe("shouldCreateAnonymousSession", () => {
     "TelegramBot (like TwitterBot)",
     "Mozilla/5.0 (compatible; Discordbot/2.0; +https://discordapp.com)",
     "Mozilla/5.0 (compatible; bingbot/2.0)",
+    "Mozilla/5.0 (compatible; AhrefsBot/7.0; +http://ahrefs.com/robot/)",
+    "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; GPTBot/1.2; +https://openai.com/gptbot)",
+    "Mozilla/5.0 (compatible; SemrushBot/7~bl)",
+    "Mozilla/5.0 (Windows NT 6.1; WOW64) SkypeUriPreview Preview/0.5",
+    "Mozilla/5.0 (compatible; Yahoo! Slurp)",
+    "AdsBot-Google (+http://www.google.com/adsbot.html)",
+    "Mozilla/5.0 (Linux; Android 5.0) AppleWebKit/537.36 (KHTML, like Gecko) Mobile Safari/537.36 (compatible; Bytespider)",
   ])("robot %s ei loo kasutajat", (ua) => {
     expect(shouldCreateAnonymousSession(req("/", { headers: { accept: "text/html", "user-agent": ua } }))).toBe(false);
   });

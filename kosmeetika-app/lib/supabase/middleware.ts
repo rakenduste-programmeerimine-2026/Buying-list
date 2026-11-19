@@ -7,10 +7,10 @@ import { getSupabaseEnv } from "./env";
 // Robotid, lingi eelvaated ja monitooring ei vaja kasutajat. Supabase piirab
 // anonüümsete kasutajate loomist IP kohta ning kuna see päring tuleb meie
 // serverist, jagavad kõik külastajad sama limiiti — robotid ei tohi seda kulutada.
-// Ainult konkreetsed tunnused sõnapiiridega: nt „Cubot“ telefon või Telegrami
-// rakendusesisene brauser EI ole robotid.
+// „…bot“ sõna lõpus (Googlebot, AhrefsBot, GPTBot, Slackbot …), aga mitte „Cubot“
+// telefon; Telegrami/Discordi rakendusesisesed brauserid EI ole robotid.
 const BOT_RE =
-  /\bbot\b|\b(?:googlebot|bingbot|duckduckbot|yandexbot|baiduspider|applebot|slackbot(?:-linkexpanding)?|twitterbot|linkedinbot|discordbot|telegrambot|facebookexternalhit|facebookcatalog|embedly|crawler|spider|headlesschrome|lighthouse|uptimerobot|pingdom|curl|wget|python-requests|go-http-client)\b|^whatsapp\//i;
+  /(?<!cu)bot\b|crawl|spider|slurp|preview|facebookexternalhit|facebookcatalog|embedly|headlesschrome|lighthouse|pingdom|python-requests|go-http-client|^curl\/|^wget\/|^whatsapp\//i;
 
 /**
  * Kas sellele päringule võib luua anonüümse sessiooni?
@@ -70,7 +70,7 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
   // ilma võrgupäringuta) ja vajadusel värskendab sessiooni.
   try {
     const { data, error: claimsError } = await supabase.auth.getClaims();
-    const hasUser = Boolean(data?.claims.sub);
+    const hasUser = Boolean(data?.claims?.sub);
 
     // Auth teenuse ajutine viga EI tähenda, et kasutajat pole: uut anonüümset
     // kasutajat ei looda, muidu kaoks olemasoleva kasutaja sessioon (ja nimekiri).
