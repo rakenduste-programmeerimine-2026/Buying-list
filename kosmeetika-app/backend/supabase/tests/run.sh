@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Käivitab RLS ja piirangute testid ajutises andmebaasis.
-#   PGHOST=... PGPORT=... PGUSER=postgres supabase/tests/run.sh
+#   PGHOST=... PGPORT=... PGUSER=postgres backend/supabase/tests/run.sh
 # Vajab Postgres'i (14+). Päris Supabase'i projekti EI puuduta.
 set -euo pipefail
 cd "$(dirname "$0")/.."

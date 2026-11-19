@@ -88,31 +88,36 @@ Rakendus avaneb aadressil [http://localhost:3000](http://localhost:3000).
  
 ## Kaustade struktuur
  
-Soovituslik struktuur:
- 
+Üks Next.js rakendus (`kosmeetika-app/`), kus frontend ja backend on eraldi kaustades:
+
 ```
-src/
-├── app/
-│   ├── page.tsx                 # Avaleht: poodide loetelu + uue poe lisamine
-│   └── stores/
-│       └── [id]/
-│           └── page.tsx         # Poe leht: toodete nimekiri
-├── components/                  # UI komponendid (frontend)
-│   ├── StoreList.tsx
-│   ├── AddStoreForm.tsx
-│   ├── ProductList.tsx
-│   ├── ProductItem.tsx
-│   └── AddProductForm.tsx
-├── lib/
-│   ├── supabase/                # Supabase'i kliendid (backend)
-│   │   ├── client.ts
-│   │   └── server.ts
-│   └── actions/                 # Server Actions / andmeloogika (backend)
-│       ├── stores.ts
-│       └── products.ts
-└── types/
-    └── database.ts              # Supabase'ist genereeritud tüübid
+kosmeetika-app/
+├── frontend/                    # FRONTEND (Markus)
+│   ├── app/
+│   │   ├── layout.tsx, globals.css
+│   │   ├── page.tsx             # Avaleht: poodide loetelu + uue poe lisamine
+│   │   └── stores/[id]/page.tsx # Poe leht: toodete nimekiri
+│   ├── components/              # StoreListView, StoreView
+│   └── lib/                     # api.ts (mock või HTTP), api-http.ts, api-mock.ts, format.ts, types.ts
+├── backend/                     # BACKEND (Maik)
+│   ├── app/api/                 # HTTP API: /api/stores, /api/products …
+│   ├── app/auth/callback/       # e-posti kinnituse tagasisuunamine
+│   ├── lib/supabase/            # Supabase'i kliendid + sessiooni middleware
+│   ├── lib/actions/             # Server Actions
+│   ├── lib/data/                # andmeloogika, valideerimine, sorteerimine
+│   ├── lib/http/                # API abifunktsioonid
+│   ├── types/database.ts        # andmebaasi tüübid
+│   ├── supabase/sql/            # RLS ja piirangute SQL (käivita Supabase'is)
+│   ├── tests/                   # Vitest testid
+│   └── docs/BACKEND.md
+├── app/                         # ainult õhukesed failid, mis suunavad frontend/ või backend/ koodi juurde
+└── middleware.ts                # Supabase'i sessioon (kood: backend/lib/supabase/middleware.ts)
 ```
+
+Next.js nõuab, et marsruudid oleksid `app/` kaustas, seega `app/` failid ainult
+ekspordivad koodi `frontend/` või `backend/` kaustast. Importides lahendatakse `@/…`
+järjekorras `./`, `./frontend/`, `./backend/` (vt `tsconfig.json` → `paths`), nii et
+näiteks `@/components/StoreView` leiab faili `frontend/components/StoreView.tsx`.
  
  
 ## Tööjaotus
@@ -136,7 +141,7 @@ Backendi ülesanne on ühendada Next.js rakendus Supabase'iga ja pakkuda fronten
 - [x] **TypeScripti tüübid**
   - Genereeri tüübid Supabase'i skeemist:
 ```bash
-npx supabase gen types typescript --project-id <projekti-id> > src/types/database.ts
+npx supabase gen types typescript --project-id <projekti-id> > backend/types/database.ts
 ```
 - [x] **Poodide funktsioonid** (`lib/actions/stores.ts`)
   - `getStores()` – kõigi poodide loetelu (tähestiku järjekorras)
@@ -155,10 +160,10 @@ npx supabase gen types typescript --project-id <projekti-id> > src/types/databas
   - Funktsioonid tagastavad selge veateate, mida frontend saab kasutajale näidata
 - [ ] **Turvalisus**
   - Kontrolli koos Supabase'i poolega, et Row Level Security (RLS) reeglid on paigas
-  - RLS SQL on valmis ja testitud (`kosmeetika-app/supabase/sql/`), tuleb käivitada Supabase'is
+  - RLS SQL on valmis ja testitud (`kosmeetika-app/backend/supabase/sql/`), tuleb käivitada Supabase'is
 
-> ✅ Backend on valmis: kood kaustas `kosmeetika-app/` (`lib/supabase`, `lib/actions`, `lib/data`, `app/api`, `types/database.ts`).
-> Seadistus, funktsioonide ja API kirjeldus ning turvalisus: [`kosmeetika-app/docs/BACKEND.md`](kosmeetika-app/docs/BACKEND.md).
+> ✅ Backend on valmis: kood kaustas `kosmeetika-app/backend/` (`lib/supabase`, `lib/actions`, `lib/data`, `app/api`, `types/database.ts`).
+> Seadistus, funktsioonide ja API kirjeldus ning turvalisus: [`kosmeetika-app/backend/docs/BACKEND.md`](kosmeetika-app/backend/docs/BACKEND.md).
 
 #### Sorteerimise näide
  
