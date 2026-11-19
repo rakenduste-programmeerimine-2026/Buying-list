@@ -4,6 +4,7 @@
 -- ja kontrollinud, et olemasolevad andmed vastavad reeglitele:
 --   select * from stores where length(btrim(name)) = 0 or char_length(name) > 100;
 --   select * from products where length(btrim(name)) = 0 or char_length(name) > 100;
+-- (tühjad is_needed väärtused muudetakse allpool automaatselt false'iks)
 
 alter table public.stores
   drop constraint if exists stores_name_not_blank,
@@ -16,6 +17,8 @@ alter table public.products
   drop constraint if exists products_name_max_length,
   add constraint products_name_not_blank check (length(btrim(name)) > 0),
   add constraint products_name_max_length check (char_length(name) <= 100);
+
+update public.products set is_needed = false where is_needed is null;
 
 alter table public.products
   alter column is_needed set not null,
