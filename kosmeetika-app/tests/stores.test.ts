@@ -70,8 +70,8 @@ describe("getStoresWithCounts", () => {
 
     expect(r.ok && r.data).toEqual([
       { ...store(), product_count: 3, needed_count: 2 },
-      { ...store({ id: STORE_ID_2, name: "Tühi pood" }), product_count: 0, needed_count: 0 },
       { ...store({ id: STORE_ID_2, name: "Null" }), product_count: 0, needed_count: 0 },
+      { ...store({ id: STORE_ID_2, name: "Tühi pood" }), product_count: 0, needed_count: 0 },
     ]);
     expect(fake.argsOf("select")[0][0]).toContain("products(is_needed)");
   });

@@ -3,6 +3,7 @@ import { success, type ActionResult } from "./result";
 import type { DbClient, Store, StoreWithCounts, StoreWithProducts } from "./types";
 import { validateId, validateName } from "./validation";
 import { getProductsByStore } from "./products";
+import { sortStores } from "./sort";
 
 const STORE_COLUMNS = "id, name, created_at";
 
@@ -15,7 +16,7 @@ export async function getStores(db: DbClient): Promise<ActionResult<Store[]>> {
       .order("name", { ascending: true })
       .order("created_at", { ascending: true });
     if (error) return mapDbError(error, "store", "getStores");
-    return success(data ?? []);
+    return success(sortStores(data ?? []));
   } catch (err) {
     return mapUnexpected(err, "getStores");
   }
@@ -33,7 +34,7 @@ export async function getStoresWithCounts(db: DbClient): Promise<ActionResult<St
 
     const rows = (data ?? []) as Array<Store & { products: { is_needed: boolean }[] | null }>;
     return success(
-      rows.map(({ products, ...store }) => ({
+      sortStores(rows).map(({ products, ...store }) => ({
         ...store,
         product_count: products?.length ?? 0,
         needed_count: products?.filter((p) => p.is_needed).length ?? 0,

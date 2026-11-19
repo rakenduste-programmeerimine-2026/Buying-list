@@ -1,12 +1,15 @@
 import { mapDbError, mapUnexpected, notFound } from "./errors";
 import { success, type ActionResult } from "./result";
 import type { DbClient, Product } from "./types";
+import { sortProducts } from "./sort";
 import { validateBoolean, validateId, validateName } from "./validation";
 
 const PRODUCT_COLUMNS = "id, store_id, name, is_needed, created_at";
 
 /**
  * Poe tooted: „vaja juurde“ tooted eespool, seejärel tähestiku järjekorras.
+ * Andmebaas sorteerib (nagu ülesandes näidatud), seejärel täpsustame eesti
+ * tähestiku järgi (vt sort.ts).
  */
 export async function getProductsByStore(db: DbClient, storeId: unknown): Promise<ActionResult<Product[]>> {
   const idCheck = validateId(storeId, "store");
@@ -20,7 +23,7 @@ export async function getProductsByStore(db: DbClient, storeId: unknown): Promis
       .order("name", { ascending: true })
       .order("created_at", { ascending: true });
     if (error) return mapDbError(error, "product", "getProductsByStore");
-    return success(data ?? []);
+    return success(sortProducts(data ?? []));
   } catch (err) {
     return mapUnexpected(err, "getProductsByStore");
   }
